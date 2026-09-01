@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>乐理练习 · Music Theory Trainer</title>
+<style>
+  :root{
+    --paper:#FAF6EE; --panel:#FFFDF8; --ink:#2A2926; --muted:#8A8378;
+    --line:#3A3733; --accent:#B85C38; --accent-soft:rgba(184,92,56,.13);
+    --gold:rgba(214,167,74,.32); --gold-line:#C9A24A; --gold-deep:#7A5A12;
+    --good:#4E7C59; --good-soft:rgba(78,124,89,.16);
+    --bad:#B0413E; --bad-soft:rgba(176,65,62,.14);
+    --wkey:#FCFAF5; --wkey-b:#D9D2C5; --bkey:#2E2A26;
+    --nat:#2A2926; --semi:#3F6FA0;            /* 自然音 / 半音 两色 */
+    --cagedC:#8E7CC3; --cagedA:#5FA64A; --cagedG:#2FA7B8; --cagedE:#C99A12; --cagedD:#D9685C;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:system-ui,"Segoe UI","Microsoft YaHei",sans-serif;
+    line-height:1.5; padding:24px 16px 64px;
+  }
+  .wrap{max-width:900px;margin:0 auto}
+  h1{
+    font-family:Georgia,"Songti SC",serif; font-weight:600;
+    font-size:26px; margin:0 0 2px; letter-spacing:.5px;
+  }
+  .sub{color:var(--muted);font-size:13px;margin-bottom:20px}
+
+  /* tabs */
+  .tabs{display:flex;gap:6px;border-bottom:1px solid #E6DFD2;margin-bottom:18px}
+  .tab{
+    padding:9px 18px;border:none;background:none;cursor:pointer;
+    font-size:15px;color:var(--muted);font-family:inherit;
+    border-bottom:2px solid transparent;margin-bottom:-1px;
+  }
+  .tab.active{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+  .tab:disabled{cursor:default;opacity:.5}
+
+  /* mode toggle */
+  .seg{display:inline-flex;background:#EFE9DC;border-radius:9px;padding:3px;gap:2px}
+  .seg button{
+    border:none;background:none;cursor:pointer;font-family:inherit;font-size:14px;
+    padding:6px 16px;border-radius:7px;color:var(--muted);
+  }
+  .seg button.on{background:var(--panel);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08);font-weight:600}
+
+  .panel{
+    background:var(--panel);border:1px solid #EBE4D6;border-radius:14px;
+    padding:18px 20px;margin-top:16px;box-shadow:0 1px 2px rgba(0,0,0,.03);
+  }
+
+  /* controls */
+  .ctrow{display:flex;flex-wrap:wrap;gap:18px 26px;align-items:center}
+  .ctrl{display:flex;flex-direction:column;gap:5px}
+  .ctrl > span.lab{font-size:12px;color:var(--muted);letter-spacing:.3px}
+  .pills{display:inline-flex;background:#EFE9DC;border-radius:8px;padding:2px;gap:2px}
+  .pills button{
+    border:none;background:none;cursor:pointer;font-family:inherit;font-size:13px;
+    padding:5px 11px;border-radius:6px;color:var(--muted);
+  }
+  .pills button.on{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.07);font-weight:600}
+  .chk{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--ink);cursor:pointer;user-select:none}
+  .chk input{width:15px;height:15px;accent-color:var(--accent)}
+  /* CAGED 选项：带主色调小方块 */
+  .caged-opts{display:flex;gap:10px;flex-wrap:wrap}
+  .caged-opt{display:inline-flex;align-items:center;gap:6px;font-family:Georgia,serif;font-weight:700;
+    font-size:14px;padding:4px 10px;border-radius:8px;border:1.5px solid #E0D8C8;cursor:pointer;user-select:none}
+  .caged-opt input{display:none}
+  .caged-opt .sw{width:13px;height:13px;border-radius:3px}
+  .caged-opt.on{border-color:currentColor;background:rgba(0,0,0,.03)}
+
+  .hint{font-size:13px;color:var(--muted);margin:14px 2px 0}
+
+  /* staff + keyboard */
+  .stage{margin-top:6px}
+  svg.staff{display:block;width:100%;height:auto;max-height:300px}
+  .kbwrap{margin-top:8px;overflow-x:auto}
+  svg.kb{display:block;width:100%;height:auto}
+
+  /* readout */
+  .readout{
+    display:flex;align-items:baseline;gap:14px;min-height:62px;
+    margin:6px 2px 2px;
+  }
+  .note-big{
+    font-family:Georgia,"Songti SC",serif;font-size:48px;font-weight:600;
+    line-height:1;color:var(--accent);min-width:90px;
+  }
+  .note-big.good{color:var(--good)} .note-big.bad{color:var(--bad)}
+  .note-desc{font-size:14px;color:var(--muted)}
+
+  /* quiz buttons */
+  .letters{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+  .letters button{
+    font-family:Georgia,serif;font-size:20px;font-weight:600;
+    width:50px;height:50px;border:1px solid var(--wkey-b);border-radius:10px;
+    background:var(--wkey);color:var(--ink);cursor:pointer;transition:transform .05s;
+  }
+  .letters button:hover{border-color:var(--accent)}
+  .letters button:active{transform:translateY(1px)}
+  .letters button.lit-good{background:var(--good-soft);border-color:var(--good)}
+  .letters button.lit-bad{background:var(--bad-soft);border-color:var(--bad)}
+
+  .btn{
+    font-family:inherit;font-size:14px;padding:9px 20px;border-radius:9px;
+    border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;
+  }
+  .btn.ghost{background:none;color:var(--accent)}
+  .btn:active{transform:translateY(1px)}
+
+  .stats{display:flex;flex-wrap:wrap;gap:6px 20px;margin-top:14px;font-size:14px}
+  .stat b{font-family:Georgia,serif;font-size:18px}
+  .stat .k{color:var(--muted);font-size:12px;margin-left:4px}
+  details.weak{margin-top:12px;font-size:13px;color:var(--muted)}
+  details.weak summary{cursor:pointer}
+  .weakgrid{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px}
+  .weakgrid span{font-family:Georgia,serif}
+
+  .feedback{font-size:14px;margin-left:auto;align-self:center}
+  .feedback.good{color:var(--good)} .feedback.bad{color:var(--bad)}
+
+  /* guitar placeholder */
+  .soon{text-align:center;padding:50px 20px;color:var(--muted)}
+  .soon .big{font-family:Georgia,serif;font-size:20px;color:var(--ink);margin-bottom:8px}
+  .hide{display:none!important}
+  .footer{margin-top:30px;font-size:12px;color:var(--muted);text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>乐理练习</h1>
+  <div class="sub">五线谱 ↔ 绝对音 ↔ 钢琴键位 · 自由探索 + 测验</div>
+
+  <div class="tabs">
+    <button class="tab active" id="tab-piano">钢琴</button>
+    <button class="tab" id="tab-guitar">吉他</button>
+  </div>
+
+  <!-- ============ PIANO ============ -->
+  <div id="piano">
+    <div class="seg" id="modeSeg">
+      <button class="on" data-mode="explore">自由探索</button>
+      <button data-mode="quiz">测验</button>
+    </div>
+
+    <!-- shared controls -->
+    <div class="panel">
+      <div class="ctrow">
+        <div class="ctrl">
+          <span class="lab">谱号</span>
+          <div class="pills" id="clefPills">
+            <button data-clef="grand" class="on">大谱表</button>
+            <button data-clef="treble">高音谱</button>
+            <button data-clef="bass">低音谱</button>
+          </div>
+        </div>
+
+        <!-- explore-only -->
+        <div class="ctrl exp-only">
+          <span class="lab">显示</span>
+          <div style="display:flex;gap:18px">
+            <label class="chk"><input type="checkbox" id="showKeyNames"> 琴键音名</label>
+            <label class="chk"><input type="checkbox" id="showACE"> ACE 锚点</label>
+          </div>
+        </div>
+
+        <!-- quiz-only -->
+        <div class="ctrl quiz-only hide">
+          <span class="lab">出题范围</span>
+          <div class="pills" id="rangePills">
+            <button data-ledger="0" class="on">仅谱表内</button>
+            <button data-ledger="1">+1 加线</button>
+            <button data-ledger="2">+2 加线</button>
+          </div>
+        </div>
+        <div class="ctrl quiz-only hide">
+          <span class="lab">作答方式</span>
+          <div class="pills" id="answerPills">
+            <button data-by="name" class="on">报音名</button>
+            <button data-by="key">点琴键</button>
+          </div>
+        </div>
+        <div class="ctrl quiz-only hide">
+          <span class="lab">辅助提示</span>
+          <div style="display:flex;gap:18px">
+            <label class="chk"><input type="checkbox" id="qKeyNames"> 琴键音名</label>
+            <label class="chk"><input type="checkbox" id="qACE"> ACE 锚点</label>
+          </div>
+        </div>
+      </div>
+
+      <p class="hint exp-only" id="expHint">在五线谱上移动鼠标会跟出一个音；点一下定住，键盘上对应的键会亮起。也可以直接点钢琴键，五线谱上就会画出它的位置。</p>
+    </div>
+
+    <!-- stage -->
+    <div class="panel stage">
+      <div class="readout">
+        <div class="note-big" id="noteBig">—</div>
+        <div class="note-desc" id="noteDesc">点谱表或键盘开始</div>
+        <div class="feedback" id="feedback"></div>
+      </div>
+
+      <svg class="staff" id="staff" viewBox="0 0 560 300" preserveAspectRatio="xMidYMid meet"></svg>
+
+      <div class="kbwrap">
+        <svg class="kb" id="kb" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+
+      <!-- quiz controls under stage -->
+      <div class="quiz-only hide">
+        <div class="letters" id="letters"></div>
+        <div style="display:flex;gap:10px;margin-top:14px;align-items:center">
+          <button class="btn" id="nextBtn">下一题</button>
+          <button class="btn ghost" id="resetBtn">重置统计</button>
+        </div>
+        <div class="stats" id="stats">
+          <div class="stat"><b id="sRight">0</b><span class="k">对</span></div>
+          <div class="stat"><b id="sWrong">0</b><span class="k">错</span></div>
+          <div class="stat"><b id="sStreak">0</b><span class="k">连对</span></div>
+          <div class="stat"><b id="sBest">0</b><span class="k">最佳连对</span></div>
+          <div class="stat"><b id="sAcc">—</b><span class="k">正确率</span></div>
+          <div class="stat"><b id="sAvg">—</b><span class="k">平均用时</span></div>
+        </div>
+        <details class="weak">
+          <summary>哪些音容易错</summary>
+          <div class="weakgrid" id="weakGrid">还没有数据。</div>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ GUITAR ============ -->
+  <div id="guitar" class="hide">
+    <div class="seg" id="gModeSeg">
+      <button class="on" data-gmode="explore">自由探索</button>
+      <button data-gmode="quiz">测验</button>
+    </div>
+
+    <div class="panel">
+      <div class="ctrow">
+        <div class="ctrl g-exp-only">
+          <span class="lab">显示</span>
+          <div style="display:flex;gap:18px;flex-wrap:wrap">
+            <label class="chk"><input type="checkbox" id="gShowNames"> 全部音名</label>
+            <label class="chk"><input type="checkbox" id="gMovableDo"> 首调音级（点一个位置当 1=do）</label>
+          </div>
+        </div>
+        <div class="ctrl g-quiz-only hide">
+          <span class="lab">题型</span>
+          <div class="pills" id="gQuizType">
+            <button data-qt="note" class="on">认绝对音</button>
+            <button data-qt="findall">找全部</button>
+            <button data-qt="solfege">首调音级</button>
+          </div>
+        </div>
+        <div class="ctrl g-quiz-only hide">
+          <span class="lab">含升降号</span>
+          <label class="chk"><input type="checkbox" id="gAccidentals"> 包含 #（默认只考自然音）</label>
+        </div>
+      </div>
+      <div class="ctrl g-exp-only" style="margin-top:14px">
+        <span class="lab">CAGED 五种指型（C 大调 · 数字 = 音级 1–7，4·7 用菱形 · 可多选）</span>
+        <div class="caged-opts" id="cagedOpts">
+          <label class="caged-opt" style="color:var(--cagedC)"><input type="checkbox" data-shape="C"><span class="sw" style="background:var(--cagedC)"></span>C</label>
+          <label class="caged-opt" style="color:var(--cagedA)"><input type="checkbox" data-shape="A"><span class="sw" style="background:var(--cagedA)"></span>A</label>
+          <label class="caged-opt" style="color:var(--cagedG)"><input type="checkbox" data-shape="G"><span class="sw" style="background:var(--cagedG)"></span>G</label>
+          <label class="caged-opt" style="color:var(--cagedE)"><input type="checkbox" data-shape="E"><span class="sw" style="background:var(--cagedE)"></span>E</label>
+          <label class="caged-opt" style="color:var(--cagedD)"><input type="checkbox" data-shape="D"><span class="sw" style="background:var(--cagedD)"></span>D</label>
+        </div>
+      </div>
+      <p class="hint g-exp-only" id="gExpHint">鼠标放到任意品位看绝对音；点一下，指板上所有「同名音」一起亮起（你的同音网）。勾「首调音级」后点一个位置当 1(do)，前后 3 品内的 1234567 会标出来。CAGED 五个指型可单选 / 多选 / 全选，各一种主色。</p>
+    </div>
+
+    <div class="panel stage">
+      <div class="readout">
+        <div class="note-big" id="gNoteBig">—</div>
+        <div class="note-desc" id="gNoteDesc">点指板开始</div>
+        <div class="feedback" id="gFeedback"></div>
+      </div>
+
+      <svg class="staff" id="fretboard" viewBox="0 0 760 250" preserveAspectRatio="xMidYMid meet"></svg>
+
+      <div class="g-quiz-only hide">
+        <div class="letters" id="gButtons"></div>
+        <div style="display:flex;gap:10px;margin-top:14px;align-items:center">
+          <button class="btn" id="gRevealBtn" style="display:none">显示答案</button>
+          <button class="btn" id="gNextBtn">下一题</button>
+          <button class="btn ghost" id="gResetBtn">重置统计</button>
+        </div>
+        <div class="stats" id="gStats">
+          <div class="stat"><b id="gsRight">0</b><span class="k">对</span></div>
+          <div class="stat"><b id="gsWrong">0</b><span class="k">错</span></div>
+          <div class="stat"><b id="gsStreak">0</b><span class="k">连对</span></div>
+          <div class="stat"><b id="gsBest">0</b><span class="k">最佳连对</span></div>
+          <div class="stat"><b id="gsAcc">—</b><span class="k">正确率</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">本地网页 · 断网可用 · 数据不外传</div>
+</div>
+
+<script>
+"use strict";
+/* ============================================================
+   核心模型：diatonic index（自然音序号）
+   d=0 => C0。每 +1 = 自然音阶往上一个音（C D E F G A B C ...）
+   ============================================================ */
+const LETTERS = ['C','D','E','F','G','A','B'];
+const SEMI = {C:0,D:2,E:4,F:5,G:7,A:9,B:11};
+const dLetter = d => LETTERS[((d%7)+7)%7];
+const dOct    = d => Math.floor(d/7);
+const dName   = d => dLetter(d)+dOct(d);              // "A4"
+const dMidi   = d => (dOct(d)+1)*12 + SEMI[dLetter(d)]; // C4 -> 60
+
+/* 五线谱几何 */
+const VBW=560, VBH=300, MIDY=150, STEP=7, GAP=STEP*2;
+const X0=70, X1=490, NOTEX=300;          // 谱线左右端、定住音符的 x
+const SVGNS="http://www.w3.org/2000/svg";
+
+/* 三种谱号配置：lines=画哪些线(d), ref=放在 MIDY 的 d, lo/hi=该谱号正常涉及范围 */
+const CLEFS = {
+  treble:{ lines:[30,32,34,36,38], ref:34, base:[30,38], glyph:[{d:34,ch:'𝄞',size:62}] },
+  bass:  { lines:[18,20,22,24,26], ref:22, base:[18,26], glyph:[{d:24,ch:'𝄢',size:40}] },
+  grand: { lines:[18,20,22,24,26,30,32,34,36,38], ref:28, base:[18,38],
+           glyph:[{d:34,ch:'𝄞',size:54},{d:24,ch:'𝄢',size:36}] }
+};
+/* ACE 锚点（The ACE Staff）：la-do-mi(Am和弦)在谱上重复且以中央C上下对称。
+   大谱表显 5 组（上下各加一组）：A1C2E2 / A2C3E3 / 跨中央C的 A3-C4-E4 / A4C5E5 / A5C6E6；
+   高音/低音单谱号各显 3 组。不落谱线的偶数音位自动补短加线。 */
+const ACE = {
+  treble:[26,28,30, 33,35,37, 40,42,44],          // 上下各加一组（中组 + 上方加线组）
+  bass:[12,14,16, 19,21,23, 26,28,30],
+  grand:[12,14,16, 19,21,23, 26,28,30, 33,35,37, 40,42,44]   // 5 组，上下对称
+};
+
+/* 键盘范围 C2..C6 */
+const KB_LO=14, KB_HI=42;
+const whiteDs = []; for(let d=KB_LO; d<=KB_HI; d++) whiteDs.push(d);
+
+/* ---- 全局状态 ---- */
+const S = {
+  appMode:'explore',           // explore | quiz
+  clef:'grand',
+  // explore
+  current:null,                // 选中的 d
+  showKeyNames:false, showACE:false,
+  // quiz
+  ledger:0, answerBy:'name',
+  qKeyNames:false, qACE:false,
+  q:null, answered:false, qStart:0,
+  stat:{right:0,wrong:0,streak:0,best:0,times:[]},
+  miss:{}                      // 按音名计错
+};
+
+/* ---- y 坐标 ---- */
+const cfg = () => CLEFS[S.clef];
+const yOf = d => MIDY - (d - cfg().ref)*STEP;
+
+/* ---- 加线：返回需要画线的 d 列表 ---- */
+function ledgersFor(d){
+  const c = cfg(); const out=[];
+  // 选定参考谱表（大谱表按中央C分上下）
+  let top, bot;
+  if(S.clef==='grand'){
+    if(d>=28){ top=38; bot=30; } else { top=26; bot=18; }
+  } else { bot=c.base[0]; top=c.base[1]; }
+  if(d>top){ for(let e=top+2; e<=d; e+=2) out.push(e); }
+  if(d<bot){ for(let e=bot-2; e>=d; e-=2) out.push(e); }
+  return out;
+}
+
+/* ---- 允许的出题集合 ---- */
+function allowedDs(){
+  const c=cfg(); let lo,hi;
+  if(S.clef==='grand'){ lo=18-2*S.ledger; hi=38+2*S.ledger; }
+  else { lo=c.base[0]-2*S.ledger; hi=c.base[1]+2*S.ledger; }
+  lo=Math.max(lo,KB_LO); hi=Math.min(hi,KB_HI);
+  const a=[]; for(let d=lo; d<=hi; d++) a.push(d); return a;
+}
+
+/* ============================================================
+   SVG 工具
+   ============================================================ */
+function el(tag, attrs){
+  const n=document.createElementNS(SVGNS,tag);
+  for(const k in attrs) n.setAttribute(k, attrs[k]);
+  return n;
+}
+
+/* ============================================================
+   画五线谱
+   ============================================================ */
+const staff = document.getElementById('staff');
+function renderStaff(){
+  staff.innerHTML='';
+  const c=cfg();
+
+  // ACE 锚点高亮（The ACE Staff：线/间都标，大谱表含跨中央C的对称中组）
+  const aceOn = (S.appMode==='explore'&&S.showACE)||(S.appMode==='quiz'&&S.qACE);
+  if(aceOn){
+    ACE[S.clef].forEach(d=>{
+      const y=yOf(d);
+      staff.appendChild(el('rect',{x:X0,y:y-STEP,width:X1-X0,height:GAP,
+        fill:'var(--gold)',rx:2}));
+      // 不落在谱线上的偶数音位（加线区各组 + 中央C）补一条短加线
+      if(d%2===0 && !cfg().lines.includes(d)){
+        staff.appendChild(el('line',{x1:NOTEX-16,y1:y,x2:NOTEX+16,y2:y,
+          stroke:'var(--line)','stroke-width':1.3}));
+      }
+      // 在中央（中央C 加线所在的那一列）放一个金色符头，让它读作"音"而非只是阴影
+      staff.appendChild(el('ellipse',{cx:NOTEX,cy:y,rx:7.5,ry:5.5,
+        fill:'var(--gold-line)',stroke:'var(--gold-deep)','stroke-width':0.8,
+        transform:`rotate(-20 ${NOTEX} ${y})`}));
+      const t=el('text',{x:X0-6,y:y+4,'text-anchor':'end',
+        'font-size':12,fill:'var(--gold-deep)','font-family':'Georgia,serif','font-weight':'700'});
+      t.textContent=dLetter(d); staff.appendChild(t);
+    });
+  }
+
+  // 谱线
+  c.lines.forEach(d=>{
+    staff.appendChild(el('line',{x1:X0,y1:yOf(d),x2:X1,y2:yOf(d),
+      stroke:'var(--line)','stroke-width':1.3}));
+  });
+
+  // 谱号
+  c.glyph.forEach(g=>{
+    const t=el('text',{x:34,y:yOf(g.d),'font-size':g.size,
+      'dominant-baseline':'central','text-anchor':'middle',fill:'var(--ink)',
+      'font-family':"'Segoe UI Symbol','Bravura','Noto Music',serif"});
+    t.textContent=g.ch; staff.appendChild(t);
+  });
+
+  // 音符层（后面动态填）
+  const gl=el('g',{id:'noteLayer'}); staff.appendChild(gl);
+  drawNotes();
+}
+
+function noteHead(d,x,color,opacity){
+  const g=el('g',{opacity:opacity==null?1:opacity});
+  // 加线
+  ledgersFor(d).forEach(e=>{
+    g.appendChild(el('line',{x1:x-15,y1:yOf(e),x2:x+15,y2:yOf(e),
+      stroke:'var(--line)','stroke-width':1.3}));
+  });
+  // 符头（略倾斜的椭圆）
+  const y=yOf(d);
+  const head=el('ellipse',{cx:x,cy:y,rx:8.2,ry:6,fill:color,
+    transform:`rotate(-20 ${x} ${y})`});
+  g.appendChild(head);
+  return g;
+}
+
+let ghost=null;     // 探索模式悬停虚影 d
+function drawNotes(){
+  const gl=document.getElementById('noteLayer'); if(!gl) return;
+  gl.innerHTML='';
+  if(S.appMode==='explore'){
+    if(ghost!=null && ghost!==S.current)
+      gl.appendChild(noteHead(ghost, ghostX, 'var(--muted)', .35));
+    if(S.current!=null)
+      gl.appendChild(noteHead(S.current, NOTEX, 'var(--accent)', 1));
+  } else { // quiz
+    if(S.q!=null){
+      let color='var(--ink)';
+      if(S.answered) color = S.lastCorrect?'var(--good)':'var(--bad)';
+      gl.appendChild(noteHead(S.q, NOTEX, color, 1));
+    }
+  }
+}
+
+/* ============================================================
+   画钢琴键盘
+   ============================================================ */
+const kb=document.getElementById('kb');
+const WK=34, WH=146, BK=21, BH=92;
+let keyEls={};   // d -> rect element
+function renderKeyboard(){
+  kb.innerHTML=''; keyEls={};
+  const n=whiteDs.length, W=n*WK, H=WH+4;
+  kb.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  const blackAfter={C:1,D:1,F:1,G:1,A:1}; // 这些白键右侧有黑键
+
+  // 白键
+  whiteDs.forEach((d,i)=>{
+    const r=el('rect',{x:i*WK+1,y:1,width:WK-2,height:WH,rx:5,
+      fill:'var(--wkey)',stroke:'var(--wkey-b)','stroke-width':1.2,
+      'data-d':d,class:'wkey',style:'cursor:pointer'});
+    kb.appendChild(r); keyEls[d]=r;
+  });
+  // 黑键（仅视觉，便于定位；v1 只练自然音）
+  whiteDs.forEach((d,i)=>{
+    if(i<n-1 && blackAfter[dLetter(d)]){
+      kb.appendChild(el('rect',{x:(i+1)*WK-BK/2,y:1,width:BK,height:BH,rx:3,
+        fill:'var(--bkey)','pointer-events':'none'}));
+    }
+  });
+  // 音名标注
+  drawKeyLabels();
+  // C 字下标永久小标（帮助定位八度：每个 C 标注）
+  whiteDs.forEach((d,i)=>{
+    if(dLetter(d)==='C'){
+      const t=el('text',{x:i*WK+WK/2,y:WH-7,'text-anchor':'middle',
+        'font-size':10,fill:'var(--muted)','font-family':'Georgia,serif',
+        'pointer-events':'none',class:'octlab'});
+      t.textContent=d===28?'中央C':('C'+dOct(d)); kb.appendChild(t);
+    }
+  });
+  bindKeys();
+}
+function drawKeyLabels(){
+  kb.querySelectorAll('.klab').forEach(n=>n.remove());
+  const on=(S.appMode==='explore'&&S.showKeyNames)||(S.appMode==='quiz'&&S.qKeyNames);
+  if(!on) return;
+  whiteDs.forEach((d,i)=>{
+    if(dLetter(d)==='C') return; // C 已有八度标
+    const t=el('text',{x:i*WK+WK/2,y:WH-7,'text-anchor':'middle',
+      'font-size':11,fill:'var(--muted)','font-family':'Georgia,serif',
+      'pointer-events':'none',class:'klab'});
+    t.textContent=dLetter(d); kb.appendChild(t);
+  });
+}
+function highlightKey(d, state){ // state: 'sel'|'good'|'bad'|null(clear all)
+  whiteDs.forEach(x=>{
+    const r=keyEls[x];
+    r.setAttribute('fill', x===d
+      ? (state==='good'?'var(--good-soft)':state==='bad'?'var(--bad-soft)':'var(--accent-soft)')
+      : 'var(--wkey)');
+    r.setAttribute('stroke', x===d
+      ? (state==='good'?'var(--good)':state==='bad'?'var(--bad)':'var(--accent)')
+      : 'var(--wkey-b)');
+    r.setAttribute('stroke-width', x===d?2:1.2);
+  });
+}
+function clearKeys(){ highlightKey(-999,null); }
+
+/* ============================================================
+   读数显示
+   ============================================================ */
+const noteBig=document.getElementById('noteBig');
+const noteDesc=document.getElementById('noteDesc');
+function setReadout(d, cls){
+  noteBig.className='note-big'+(cls?(' '+cls):'');
+  if(d==null){ noteBig.textContent='—'; noteDesc.textContent=''; return; }
+  noteBig.textContent=dName(d);
+  noteDesc.textContent = describe(d);
+}
+function describe(d){
+  if(d===28) return '中央 C · 钢琴正中央';
+  const oct=dOct(d), rel = d>28?'中央C上方':'中央C下方';
+  return `第 ${oct} 组 · ${rel}`;
+}
+
+/* ============================================================
+   探索模式交互
+   ============================================================ */
+function svgPoint(svg, evt){
+  const pt=svg.createSVGPoint(); pt.x=evt.clientX; pt.y=evt.clientY;
+  return pt.matrixTransform(svg.getScreenCTM().inverse());
+}
+let ghostX=NOTEX;
+staff.addEventListener('mousemove', e=>{
+  if(S.appMode!=='explore') return;
+  const p=svgPoint(staff,e);
+  if(p.x<X0-30||p.x>X1+10){ ghost=null; drawNotes(); return; }
+  let d=cfg().ref + Math.round((MIDY-p.y)/STEP);
+  d=Math.max(KB_LO,Math.min(KB_HI,d));
+  ghost=d; ghostX=Math.max(X0+20,Math.min(X1-20,p.x));
+  drawNotes();
+});
+staff.addEventListener('mouseleave',()=>{ if(S.appMode==='explore'){ghost=null;drawNotes();}});
+staff.addEventListener('click', e=>{
+  if(S.appMode!=='explore') return;
+  const p=svgPoint(staff,e);
+  if(p.x<X0-30||p.x>X1+10) return;
+  let d=cfg().ref + Math.round((MIDY-p.y)/STEP);
+  d=Math.max(KB_LO,Math.min(KB_HI,d));
+  selectNote(d);
+});
+function selectNote(d){           // 探索：定住一个音
+  S.current=d; ghost=null;
+  drawNotes(); highlightKey(d,'sel'); setReadout(d,null);
+}
+
+/* ============================================================
+   键盘点击（探索=选音 / 测验=作答）
+   ============================================================ */
+function bindKeys(){
+  whiteDs.forEach(d=>{
+    keyEls[d].addEventListener('click',()=>{
+      if(S.appMode==='explore') selectNote(d);
+      else if(S.appMode==='quiz' && S.answerBy==='key') answerKey(d);
+    });
+  });
+}
+
+/* ============================================================
+   测验模式
+   ============================================================ */
+const lettersBox=document.getElementById('letters');
+function buildLetters(){
+  lettersBox.innerHTML='';
+  LETTERS.forEach(L=>{
+    const b=document.createElement('button'); b.textContent=L; b.dataset.l=L;
+    b.addEventListener('click',()=>answerName(L));
+    lettersBox.appendChild(b);
+  });
+}
+function showLetters(){
+  lettersBox.style.display = (S.answerBy==='name')?'flex':'none';
+}
+function newQuestion(){
+  const a=allowedDs();
+  let d; do{ d=a[Math.random()*a.length|0]; } while(a.length>1 && d===S.q);
+  S.q=d; S.answered=false; S.lastCorrect=null; S.qStart=performance.now();
+  clearKeys(); setReadout(null,null); noteDesc.textContent='这是哪个音？';
+  document.getElementById('feedback').textContent='';
+  lettersBox.querySelectorAll('button').forEach(b=>b.className='');
+  drawNotes();
+}
+function answerName(L){
+  if(S.answered) return;
+  const ok = L===dLetter(S.q);
+  finishAnswer(ok);
+  lettersBox.querySelectorAll('button').forEach(b=>{
+    if(b.dataset.l===dLetter(S.q)) b.classList.add('lit-good');
+    else if(b.dataset.l===L && !ok) b.classList.add('lit-bad');
+  });
+  // 键盘只负责"指出这个音在哪"，永远绿色；对错由音名按钮表示
+  highlightKey(S.q, 'good');
+}
+function answerKey(d){
+  if(S.answered) return;
+  const ok = d===S.q;
+  finishAnswer(ok);
+  highlightKey(ok? S.q : d, ok?'good':'bad');
+  if(!ok){ // 也标出正确键
+    const r=keyEls[S.q];
+    r.setAttribute('stroke','var(--good)'); r.setAttribute('stroke-width',2);
+    r.setAttribute('fill','var(--good-soft)');
+  }
+}
+function finishAnswer(ok){
+  S.answered=true; S.lastCorrect=ok;
+  const dt=(performance.now()-S.qStart)/1000;
+  S.stat.times.push(dt);
+  const fb=document.getElementById('feedback');
+  if(ok){ S.stat.right++; S.stat.streak++; S.stat.best=Math.max(S.stat.best,S.stat.streak);
+    fb.className='feedback good'; fb.textContent='对了 ✓'; setReadout(S.q,'good'); }
+  else { S.stat.wrong++; S.stat.streak=0; S.miss[dName(S.q)]=(S.miss[dName(S.q)]||0)+1;
+    fb.className='feedback bad'; fb.textContent='正确是 '+dName(S.q)+' · 看清后点「下一题」'; setReadout(S.q,'bad'); }
+  drawNotes(); updateStats();
+  // 答对自动跳下一题；答错停留，等手动点「下一题」
+  if(ok) setTimeout(()=>{ if(S.answered && S.appMode==='quiz' && S.lastCorrect) newQuestion(); }, 850);
+}
+function updateStats(){
+  const st=S.stat, tot=st.right+st.wrong;
+  document.getElementById('sRight').textContent=st.right;
+  document.getElementById('sWrong').textContent=st.wrong;
+  document.getElementById('sStreak').textContent=st.streak;
+  document.getElementById('sBest').textContent=st.best;
+  document.getElementById('sAcc').textContent= tot? Math.round(st.right/tot*100)+'%':'—';
+  document.getElementById('sAvg').textContent= st.times.length?
+    (st.times.reduce((a,b)=>a+b,0)/st.times.length).toFixed(1)+'s':'—';
+  const wg=document.getElementById('weakGrid');
+  const ks=Object.keys(S.miss).sort((a,b)=>S.miss[b]-S.miss[a]);
+  wg.innerHTML = ks.length? ks.map(k=>`<span>${k} · 错${S.miss[k]}</span>`).join('') : '还没有数据。';
+}
+function resetStats(){ S.stat={right:0,wrong:0,streak:0,best:0,times:[]}; S.miss={}; updateStats(); }
+
+/* ============================================================
+   模式 / 控件切换
+   ============================================================ */
+function applyMode(){
+  const exp=S.appMode==='explore';
+  document.querySelectorAll('.exp-only').forEach(n=>n.classList.toggle('hide',!exp));
+  document.querySelectorAll('.quiz-only').forEach(n=>n.classList.toggle('hide',exp));
+  document.querySelectorAll('#modeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.mode===S.appMode));
+  clearKeys(); ghost=null;
+  drawKeyLabels(); renderStaff();
+  if(exp){ S.current=null; setReadout(null,null); noteDesc.textContent='点谱表或键盘开始'; }
+  else { showLetters(); newQuestion(); updateStats(); }
+}
+
+/* 谱号 */
+document.getElementById('clefPills').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b)return;
+  S.clef=b.dataset.clef;
+  document.querySelectorAll('#clefPills button').forEach(x=>x.classList.toggle('on',x===b));
+  clearKeys(); S.current=null; ghost=null;
+  renderStaff();
+  if(S.appMode==='explore') setReadout(null,null), noteDesc.textContent='点谱表或键盘开始';
+  else newQuestion();
+});
+/* 范围 / 作答 */
+document.getElementById('rangePills').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b)return;
+  S.ledger=+b.dataset.ledger;
+  document.querySelectorAll('#rangePills button').forEach(x=>x.classList.toggle('on',x===b));
+  if(S.appMode==='quiz') newQuestion();
+});
+document.getElementById('answerPills').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b)return;
+  S.answerBy=b.dataset.by;
+  document.querySelectorAll('#answerPills button').forEach(x=>x.classList.toggle('on',x===b));
+  showLetters();
+});
+/* 复选框 */
+const bindChk=(id,key,after)=>document.getElementById(id).addEventListener('change',e=>{
+  S[key]=e.target.checked; after();
+});
+bindChk('showKeyNames','showKeyNames',drawKeyLabels);
+bindChk('showACE','showACE',renderStaff);
+bindChk('qKeyNames','qKeyNames',drawKeyLabels);
+bindChk('qACE','qACE',renderStaff);
+/* 模式段 */
+document.getElementById('modeSeg').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b)return;
+  S.appMode=b.dataset.mode; applyMode();
+});
+document.getElementById('nextBtn').addEventListener('click',newQuestion);
+document.getElementById('resetBtn').addEventListener('click',resetStats);
+
+/* 钢琴 / 吉他 tab */
+document.getElementById('tab-piano').addEventListener('click',()=>{
+  document.getElementById('piano').classList.remove('hide');
+  document.getElementById('guitar').classList.add('hide');
+  document.getElementById('tab-piano').classList.add('active');
+  document.getElementById('tab-guitar').classList.remove('active');
+});
+document.getElementById('tab-guitar').addEventListener('click',()=>{
+  document.getElementById('piano').classList.add('hide');
+  document.getElementById('guitar').classList.remove('hide');
+  document.getElementById('tab-guitar').classList.add('active');
+  document.getElementById('tab-piano').classList.remove('active');
+  gInit();
+});
+
+/* ============================================================
+   吉他模块
+   ============================================================ */
+const PC=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const GTUNE=[40,45,50,55,59,64];          // 弦序 0=六弦(低E)..5=一弦(高E) 的空弦 MIDI
+const STR_LABEL=['6 E','5 A','4 D','3 G','2 B','1 E'];
+const SOLF={0:'1',2:'2',4:'3',5:'4',7:'5',9:'6',11:'7'};   // 音级数字（1=do）
+const SOLF_SEQ=['1','2','3','4','5','6','7'];
+const gMidi=(s,f)=>GTUNE[s]+f;
+const gPC=(s,f)=>gMidi(s,f)%12;
+const gName=(s,f)=>{const m=gMidi(s,f);return PC[m%12]+(Math.floor(m/12)-1);};
+const isNat=pc=>[0,2,4,5,7,9,11].includes(pc);
+
+/* CAGED 五种指型（C 大调，all naturals）。每项 [弦(0=低E..5=高E), 品, 音级]。
+   读自 "Guitar Notes" 图并以乐理核对；4·7 在渲染时画成菱形。 */
+const CAGED={
+  C:{col:'var(--cagedC)',pos:[[0,0,3],[0,1,4],[0,3,5],[1,0,6],[1,2,7],[1,3,1],[2,0,2],[2,2,3],[2,3,4],[3,0,5],[3,2,6],[4,0,7],[4,1,1],[4,3,2],[5,0,3],[5,1,4],[5,3,5]]},
+  A:{col:'var(--cagedA)',pos:[[0,3,5],[0,5,6],[1,2,7],[1,3,1],[1,5,2],[2,2,3],[2,3,4],[2,5,5],[3,2,6],[3,4,7],[3,5,1],[4,3,2],[4,5,3],[4,6,4],[5,3,5],[5,5,6]]},
+  G:{col:'var(--cagedG)',pos:[[0,5,6],[0,7,7],[0,8,1],[1,5,2],[1,7,3],[1,8,4],[2,5,5],[2,7,6],[3,4,7],[3,5,1],[3,7,2],[4,5,3],[4,6,4],[4,8,5],[5,5,6],[5,7,7],[5,8,1]]},
+  E:{col:'var(--cagedE)',pos:[[0,7,7],[0,8,1],[0,10,2],[1,7,3],[1,8,4],[1,10,5],[2,7,6],[2,9,7],[2,10,1],[3,7,2],[3,9,3],[3,10,4],[4,8,5],[4,10,6],[5,7,7],[5,8,1],[5,10,2]]},
+  D:{col:'var(--cagedD)',pos:[[0,10,2],[0,12,3],[1,10,5],[1,12,6],[2,9,7],[2,10,1],[2,12,2],[3,9,3],[3,10,4],[3,12,5],[4,10,6],[4,12,7],[5,10,2],[5,12,3]]}
+};
+
+const NUTX=52, FW=54, FRETS=12, GY0=34, GYG=33;
+const boardR=()=>NUTX+FRETS*FW;
+const rowOf=s=>5-s;                       // 低音弦固定在下（高E在上）
+const gx=f=>f===0?(NUTX-18):(NUTX+(f-0.5)*FW);
+const gy=s=>GY0+rowOf(s)*GYG;
+
+S.g={inited:false,gmode:'explore',
+  sel:null,showNames:false,movableDo:false,doPos:null,
+  caged:{C:false,A:false,G:false,E:false,D:false},
+  quizType:'note',accidentals:false,
+  q:null,doAnchor:null,answered:false,lastCorrect:null,
+  target:null,findMarks:new Set(),revealed:false,    // 找全部题型
+  stat:{right:0,wrong:0,streak:0,best:0}};
+
+const fb=document.getElementById('fretboard');
+function gInit(){ if(S.g.inited)return; S.g.inited=true; gApplyMode(); }
+
+function gRenderBoard(){
+  fb.innerHTML=''; const R=boardR();
+  // 品记号 inlay
+  [3,5,7,9].forEach(f=>fb.appendChild(el('circle',{cx:NUTX+(f-0.5)*FW,cy:GY0+2.5*GYG,r:5,fill:'#E7DFCE'})));
+  [1.5,3.5].forEach(rr=>fb.appendChild(el('circle',{cx:NUTX+11.5*FW,cy:GY0+rr*GYG,r:5,fill:'#E7DFCE'})));
+  // 品丝
+  for(let f=1;f<=FRETS;f++)
+    fb.appendChild(el('line',{x1:NUTX+f*FW,y1:GY0,x2:NUTX+f*FW,y2:GY0+5*GYG,stroke:'#C9C0AE','stroke-width':2}));
+  // 琴枕
+  fb.appendChild(el('rect',{x:NUTX-3,y:GY0-2,width:5,height:5*GYG+4,fill:'var(--ink)',rx:1}));
+  // 弦 + 弦标
+  for(let s=0;s<6;s++){
+    const y=gy(s);
+    fb.appendChild(el('line',{x1:NUTX,y1:y,x2:R,y2:y,stroke:'var(--line)','stroke-width':s<2?1.8:1.2}));
+    const t=el('text',{x:16,y:y+4,'text-anchor':'middle','font-size':11,fill:'var(--muted)','font-family':'Georgia,serif'});
+    t.textContent=STR_LABEL[s]; fb.appendChild(t);
+  }
+  // 品号
+  for(let f=0;f<=FRETS;f++){
+    const t=el('text',{x:gx(f),y:GY0+5*GYG+22,'text-anchor':'middle','font-size':11,fill:'var(--muted)'});
+    t.textContent=f; fb.appendChild(t);
+  }
+  // 标记层 + 命中层
+  fb.appendChild(el('g',{id:'gMarkers'}));
+  const hit=el('g',{id:'gHits'}); fb.appendChild(hit);
+  for(let s=0;s<6;s++)for(let f=0;f<=FRETS;f++){
+    const c=el('circle',{cx:gx(f),cy:gy(s),r:15,fill:'transparent',style:'cursor:pointer'});
+    c.addEventListener('mouseenter',()=>gHover(s,f));
+    c.addEventListener('click',()=>gClick(s,f));
+    hit.appendChild(c);
+  }
+  gDrawMarkers();
+}
+
+function gMark(s,f,opt){
+  const g=document.getElementById('gMarkers'); const x=gx(f),y=gy(s);
+  const sw=opt.faint?1:1.8;
+  if(opt.diamond){                                     // 4·7 用菱形（CAGED）
+    g.appendChild(el('rect',{x:x-9.5,y:y-9.5,width:19,height:19,rx:2,
+      fill:opt.fill||'var(--wkey)',stroke:opt.stroke||'var(--wkey-b)','stroke-width':sw,
+      transform:`rotate(45 ${x} ${y})`}));
+  } else {
+    g.appendChild(el('circle',{cx:x,cy:y,r:13,fill:opt.fill||'var(--wkey)',
+      stroke:opt.stroke||'var(--wkey-b)','stroke-width':sw,opacity:opt.faint?0.9:1}));
+  }
+  if(opt.label){
+    const t=el('text',{x:x,y:y+0.5,'text-anchor':'middle','dominant-baseline':'central',
+      'font-size':opt.label.length>2?9:11,fill:opt.tcolor||'var(--ink)',
+      'font-family':'Georgia,serif','font-weight':'700','pointer-events':'none'});
+    t.textContent=opt.label; g.appendChild(t);
+  }
+}
+function gDrawMarkers(){
+  const g=document.getElementById('gMarkers'); if(!g)return; g.innerHTML=''; const G=S.g;
+  if(G.gmode==='explore'){
+    if(Object.values(G.caged).some(v=>v)){ drawCaged(); return; }  // CAGED 模式：只画指型
+    if(!G.showNames)   // 底层小点提示可点位置
+      for(let s=0;s<6;s++)for(let f=0;f<=FRETS;f++)
+        g.appendChild(el('circle',{cx:gx(f),cy:gy(s),r:3,fill:'#D7CFBE'}));
+    if(G.showNames)    // 自然音 / 半音(#) 两种颜色
+      for(let s=0;s<6;s++)for(let f=0;f<=FRETS;f++){
+        const nat=isNat(gPC(s,f));
+        gMark(s,f,{label:PC[gPC(s,f)],faint:true,
+          fill:nat?'#FFFDF8':'#EAF0F6',tcolor:nat?'var(--nat)':'var(--semi)'});
+      }
+    if(G.movableDo && G.doPos){
+      const p0=gPC(G.doPos.s,G.doPos.f);
+      for(let s=0;s<6;s++)for(let f=Math.max(0,G.doPos.f-3);f<=Math.min(FRETS,G.doPos.f+3);f++){
+        const off=(gPC(s,f)-p0+12)%12;
+        if(off in SOLF){ const isDo=off===0;
+          gMark(s,f,{label:SOLF[off],fill:isDo?'var(--good-soft)':'var(--gold)',
+            stroke:isDo?'var(--good)':'var(--gold-line)',tcolor:isDo?'var(--good)':'var(--gold-deep)'}); }
+      }
+    } else if(G.sel){
+      const pc=gPC(G.sel.s,G.sel.f);
+      for(let s=0;s<6;s++)for(let f=0;f<=FRETS;f++)
+        if(gPC(s,f)===pc && !(s===G.sel.s&&f===G.sel.f))
+          gMark(s,f,{label:PC[pc],fill:'var(--gold)',stroke:'var(--gold-line)',tcolor:'var(--gold-deep)'});
+      gMark(G.sel.s,G.sel.f,{label:PC[pc],fill:'var(--accent-soft)',stroke:'var(--accent)',tcolor:'var(--accent)'});
+    }
+  } else { // quiz
+    if(G.quizType==='findall'){
+      for(let s=0;s<6;s++)for(let f=0;f<=FRETS;f++)   // 底层小点
+        g.appendChild(el('circle',{cx:gx(f),cy:gy(s),r:3,fill:'#D7CFBE'}));
+      if(!G.revealed){                                 // 我的标记（不显示音名）
+        G.findMarks.forEach(k=>{ const [s,f]=k.split(',').map(Number);
+          gMark(s,f,{fill:'var(--accent-soft)',stroke:'var(--accent)'}); });
+      } else {                                          // 对照：绿=对 金=漏 红=多点
+        for(let s=0;s<6;s++)for(let f=0;f<=FRETS;f++){
+          const isT=gPC(s,f)===G.target, mk=G.findMarks.has(s+','+f);
+          if(isT&&mk) gMark(s,f,{label:PC[G.target],fill:'var(--good-soft)',stroke:'var(--good)',tcolor:'var(--good)'});
+          else if(isT&&!mk) gMark(s,f,{label:PC[G.target],fill:'var(--gold)',stroke:'var(--gold-line)',tcolor:'var(--gold-deep)'});
+          else if(!isT&&mk) gMark(s,f,{label:PC[gPC(s,f)],fill:'var(--bad-soft)',stroke:'var(--bad)',tcolor:'var(--bad)'});
+        }
+      }
+    }
+    if(G.quizType==='note' && G.q){
+      if(G.answered){
+        const pc=gPC(G.q.s,G.q.f);
+        for(let s=0;s<6;s++)for(let f=0;f<=FRETS;f++)
+          if(gPC(s,f)===pc && !(s===G.q.s&&f===G.q.f))
+            gMark(s,f,{label:PC[pc],fill:'var(--gold)',stroke:'var(--gold-line)',tcolor:'var(--gold-deep)'});
+        gMark(G.q.s,G.q.f,{label:PC[pc],fill:G.lastCorrect?'var(--good-soft)':'var(--bad-soft)',
+          stroke:G.lastCorrect?'var(--good)':'var(--bad)',tcolor:G.lastCorrect?'var(--good)':'var(--bad)'});
+      } else gMark(G.q.s,G.q.f,{label:'?',fill:'var(--accent-soft)',stroke:'var(--accent)',tcolor:'var(--accent)'});
+    }
+    if(G.quizType==='solfege' && G.q && G.doAnchor){
+      gMark(G.doAnchor.s,G.doAnchor.f,{label:'1',fill:'var(--good-soft)',stroke:'var(--good)',tcolor:'var(--good)'});
+      if(G.answered){ const p0=gPC(G.doAnchor.s,G.doAnchor.f); const off=(gPC(G.q.s,G.q.f)-p0+12)%12;
+        gMark(G.q.s,G.q.f,{label:SOLF[off],fill:G.lastCorrect?'var(--good-soft)':'var(--bad-soft)',
+          stroke:G.lastCorrect?'var(--good)':'var(--bad)',tcolor:G.lastCorrect?'var(--good)':'var(--bad)'}); }
+      else gMark(G.q.s,G.q.f,{label:'?',fill:'var(--accent-soft)',stroke:'var(--accent)',tcolor:'var(--accent)'});
+    }
+  }
+}
+
+function drawCaged(){     // 叠加选中的 CAGED 指型（C 大调），4·7 菱形，各一种主色
+  ['C','A','G','E','D'].forEach(sh=>{
+    if(!S.g.caged[sh])return;
+    const col=CAGED[sh].col;
+    CAGED[sh].pos.forEach(([s,f,deg])=>{
+      gMark(s,f,{label:String(deg),fill:col,stroke:'rgba(0,0,0,.22)',tcolor:'#fff',
+        diamond:(deg===4||deg===7)});
+    });
+  });
+}
+function gSetReadout(big,desc,cls){
+  const b=document.getElementById('gNoteBig');
+  b.className='note-big'+(cls?(' '+cls):''); b.textContent=big;
+  document.getElementById('gNoteDesc').textContent=desc;
+}
+function gHover(s,f){
+  if(S.g.gmode!=='explore')return;
+  gSetReadout(PC[gPC(s,f)], gName(s,f)+' · '+STR_LABEL[s].split(' ')[0]+'弦 '+f+'品');
+}
+function gClick(s,f){
+  // 找全部题型：测验中点指板标记/取消（显示答案前）
+  if(S.g.gmode==='quiz' && S.g.quizType==='findall'){
+    if(S.g.revealed)return;
+    const k=s+','+f;
+    if(S.g.findMarks.has(k)) S.g.findMarks.delete(k); else S.g.findMarks.add(k);
+    gDrawMarkers(); return;
+  }
+  if(S.g.gmode!=='explore')return;
+  if(Object.values(S.g.caged).some(v=>v))return;   // CAGED 显示时不响应点击
+  if(S.g.movableDo){ S.g.doPos={s,f}; gSetReadout('1 = '+PC[gPC(s,f)], gName(s,f)+'：前后 3 品的音级已标出'); }
+  else { S.g.sel={s,f}; gSetReadout(PC[gPC(s,f)], gName(s,f)+'：同名音已全部点亮'); }
+  gDrawMarkers();
+}
+
+function gBuildButtons(){
+  const box=document.getElementById('gButtons'); box.innerHTML='';
+  const labels = S.g.quizType==='solfege' ? SOLF_SEQ
+    : (S.g.accidentals ? PC.slice() : ['C','D','E','F','G','A','B']);
+  labels.forEach(L=>{
+    const b=document.createElement('button'); b.textContent=L; b.dataset.l=L;
+    if(L.length>1) b.style.fontSize='14px';
+    b.addEventListener('click',()=>gAnswer(L));
+    box.appendChild(b);
+  });
+}
+function gRandPos(natOnly){
+  let s,f,tries=0;
+  do{ s=Math.random()*6|0; f=Math.random()*(FRETS+1)|0; tries++; }
+  while(natOnly && !isNat(gPC(s,f)) && tries<80);
+  return {s,f};
+}
+function gNewQuestion(){
+  const G=S.g; G.answered=false; G.lastCorrect=null;
+  document.getElementById('gFeedback').textContent='';
+  document.querySelectorAll('#gButtons button').forEach(b=>b.className='');
+  gSyncQuizUI();
+  if(G.quizType==='findall'){
+    G.findMarks=new Set(); G.revealed=false;
+    let pc; do{ pc=Math.random()*12|0; }while((!G.accidentals && !isNat(pc)) || pc===G.target);
+    G.target=pc;
+    gSetReadout(PC[pc], '点出指板上所有的「'+PC[pc]+'」，再按「显示答案」');
+  } else if(G.quizType==='note'){
+    G.doAnchor=null;
+    let p; do{ p=gRandPos(!G.accidentals); }while(G.q&&p.s===G.q.s&&p.f===G.q.f);
+    G.q=p; gSetReadout('?', '这个位置是什么音？');
+  } else {
+    const dpos={s:Math.random()*6|0, f:3+(Math.random()*7|0)};
+    const p0=gPC(dpos.s,dpos.f); const cands=[];
+    for(let s=0;s<6;s++)for(let f=Math.max(0,dpos.f-3);f<=Math.min(FRETS,dpos.f+3);f++){
+      const off=(gPC(s,f)-p0+12)%12;
+      if(off in SOLF && !(s===dpos.s&&f===dpos.f)) cands.push({s,f});
+    }
+    G.doAnchor=dpos; G.q=cands[Math.random()*cands.length|0];
+    gSetReadout('1 = '+PC[p0], '绿色是 1(do)，问号是第几级？');
+  }
+  gDrawMarkers();
+}
+function gAnswer(L){
+  const G=S.g; if(G.answered||!G.q)return;
+  let ok, correct;
+  if(G.quizType==='note'){ correct=PC[gPC(G.q.s,G.q.f)]; ok=(L===correct); }
+  else { const p0=gPC(G.doAnchor.s,G.doAnchor.f); correct=SOLF[(gPC(G.q.s,G.q.f)-p0+12)%12]; ok=(L===correct); }
+  G.answered=true; G.lastCorrect=ok;
+  const st=G.stat;
+  if(ok){ st.right++; st.streak++; st.best=Math.max(st.best,st.streak); } else { st.wrong++; st.streak=0; }
+  document.querySelectorAll('#gButtons button').forEach(b=>{
+    if(b.dataset.l===correct) b.classList.add('lit-good');
+    else if(b.dataset.l===L&&!ok) b.classList.add('lit-bad');
+  });
+  const fbk=document.getElementById('gFeedback');
+  fbk.className='feedback '+(ok?'good':'bad'); fbk.textContent= ok?'对了 ✓':('正确是 '+correct+' · 看清后点「下一题」');
+  if(G.quizType==='note') gSetReadout(correct, gName(G.q.s,G.q.f)+'：同名音已点亮', ok?'good':'bad');
+  else gSetReadout(correct, '问号 = '+gName(G.q.s,G.q.f), ok?'good':'bad');
+  gUpdateStats(); gDrawMarkers();
+  // 认绝对音：对错都停留等手动；首调音级：答对自动跳、答错停留
+  if(ok && G.quizType==='solfege') setTimeout(()=>{ if(G.answered&&G.gmode==='quiz'&&G.lastCorrect) gNewQuestion(); }, 900);
+}
+function gUpdateStats(){
+  const st=S.g.stat, tot=st.right+st.wrong;
+  document.getElementById('gsRight').textContent=st.right;
+  document.getElementById('gsWrong').textContent=st.wrong;
+  document.getElementById('gsStreak').textContent=st.streak;
+  document.getElementById('gsBest').textContent=st.best;
+  document.getElementById('gsAcc').textContent= tot? Math.round(st.right/tot*100)+'%':'—';
+}
+function gResetStats(){ S.g.stat={right:0,wrong:0,streak:0,best:0}; gUpdateStats(); }
+
+function gSyncQuizUI(){      // 找全部 = 点指板作答 + 显示答案按钮；其余 = 音名按钮
+  const fa=S.g.quizType==='findall';
+  document.getElementById('gButtons').style.display=fa?'none':'flex';
+  document.getElementById('gRevealBtn').style.display=fa?'inline-block':'none';
+}
+function gReveal(){          // 找全部：对照答案（绿=对 / 金=漏 / 红=多点）
+  const G=S.g; if(G.quizType!=='findall'||G.revealed)return;
+  G.revealed=true;
+  let total=0,correct=0,wrong=0;
+  for(let s=0;s<6;s++)for(let f=0;f<=FRETS;f++){
+    const isT=gPC(s,f)===G.target, mk=G.findMarks.has(s+','+f);
+    if(isT)total++; if(isT&&mk)correct++; if(!isT&&mk)wrong++;
+  }
+  const missed=total-correct, perfect=(missed===0&&wrong===0);
+  const fbk=document.getElementById('gFeedback');
+  fbk.className='feedback '+(perfect?'good':'bad');
+  fbk.textContent=`「${PC[G.target]}」共 ${total} 个 · 对 ${correct} · 漏 ${missed} · 多点 ${wrong}`;
+  gSetReadout(PC[G.target], perfect?'全对！':'绿=对 / 金=漏 / 红=多点', perfect?'good':'bad');
+  gDrawMarkers();
+}
+
+function gApplyMode(){
+  const exp=S.g.gmode==='explore';
+  document.querySelectorAll('.g-exp-only').forEach(n=>n.classList.toggle('hide',!exp));
+  document.querySelectorAll('.g-quiz-only').forEach(n=>n.classList.toggle('hide',exp));
+  document.querySelectorAll('#gModeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.gmode===S.g.gmode));
+  S.g.sel=null; S.g.doPos=null; S.g.q=null;
+  gRenderBoard();
+  if(exp) gSetReadout('—','点指板开始');
+  else { gBuildButtons(); gNewQuestion(); gUpdateStats(); }
+}
+
+document.getElementById('gModeSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;S.g.gmode=b.dataset.gmode;gApplyMode();});
+document.getElementById('gQuizType').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;S.g.quizType=b.dataset.qt;document.querySelectorAll('#gQuizType button').forEach(x=>x.classList.toggle('on',x===b));gBuildButtons();gNewQuestion();});
+document.getElementById('gShowNames').addEventListener('change',e=>{S.g.showNames=e.target.checked;gDrawMarkers();});
+document.getElementById('gMovableDo').addEventListener('change',e=>{S.g.movableDo=e.target.checked;S.g.sel=null;S.g.doPos=null;gSetReadout('—',e.target.checked?'点一个位置当 1(do)':'点指板开始');gDrawMarkers();});
+document.getElementById('gAccidentals').addEventListener('change',e=>{S.g.accidentals=e.target.checked;gBuildButtons();gNewQuestion();});
+document.getElementById('cagedOpts').addEventListener('change',e=>{
+  const cb=e.target.closest('input'); if(!cb)return;
+  S.g.caged[cb.dataset.shape]=cb.checked;
+  cb.closest('.caged-opt').classList.toggle('on',cb.checked);
+  const on=Object.keys(S.g.caged).filter(k=>S.g.caged[k]);
+  if(on.length){ S.g.sel=null; S.g.doPos=null;
+    gSetReadout('CAGED', on.join(' + ')+' 指型 · C 大调（数字 = 音级，4·7 为菱形）'); }
+  else gSetReadout('—','点指板开始');
+  gDrawMarkers();
+});
+document.getElementById('gNextBtn').addEventListener('click',gNewQuestion);
+document.getElementById('gRevealBtn').addEventListener('click',gReveal);
+document.getElementById('gResetBtn').addEventListener('click',gResetStats);
+
+/* ---- 启动 ---- */
+buildLetters();
+renderKeyboard();
+renderStaff();
+applyMode();
+</script>
+</body>
+</html>
